@@ -1,0 +1,73 @@
+{
+            "keywordIdeaMetrics": {
+                "competition": "LOW",
+                "monthlySearchVolumes": [
+                    {
+                        "month": "JULY",
+                        "year": "2024",
+                        "monthlySearches": "2900"
+                    },
+                    {
+                        "month": "AUGUST",
+                        "year": "2024",
+                        "monthlySearches": "2400"
+                    },
+                    {
+                        "month": "SEPTEMBER",
+                        "year": "2024",
+                        "monthlySearches": "1900"
+                    },
+                    {
+                        "month": "OCTOBER",
+                        "year": "2024",
+                        "monthlySearches": "1900"
+                    },
+                    {
+                        "month": "NOVEMBER",
+                        "year": "2024",
+                        "monthlySearches": "1900"
+                    },
+                    {
+                        "month": "DECEMBER",
+                        "year": "2024",
+                        "monthlySearches": "1600"
+                    },
+                    {
+                        "month": "JANUARY",
+                        "year": "2025",
+                        "monthlySearches": "1900"
+                    },
+                    {
+                        "month": "FEBRUARY",
+                        "year": "2025",
+                        "monthlySearches": "1900"
+                    },
+                    {
+                        "month": "MARCH",
+                        "year": "2025",
+                        "monthlySearches": "2900"
+                    },
+                    {
+                        "month": "APRIL",
+                        "year": "2025",
+                        "monthlySearches": "2400"
+                    },
+                    {
+                        "month": "MAY",
+                        "year": "2025",
+                        "monthlySearches": "1900"
+                    },
+                    {
+                        "month": "JUNE",
+                        "year": "2025",
+                        "monthlySearches": "1900"
+                    }
+                ],
+                "avgMonthlySearches": "1900",
+                "competitionIndex": "15",
+                "lowTopOfPageBidMicros": "25014932",
+                "highTopOfPageBidMicros": "123354171"
+            },
+            "text": "veterinario roma",
+            "keywordAnnotations": {}
+        }
