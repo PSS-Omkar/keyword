@@ -1,23 +1,33 @@
 # Frontend Dockerfile
-FROM node:18-alpine as builder
+FROM node:18-alpine as base
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Copy root config files
 COPY vite.config.ts ./
 COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 COPY components.json ./
+COPY tsconfig.json ./
 
-# Install dependencies
+# Copy client package files and install dependencies
+COPY client/package*.json ./client/
+WORKDIR /app/client
 RUN npm ci
 
-# Copy client source code and shared files
+# Go back to root and copy source files
+WORKDIR /app
 COPY client/ ./client/
-COPY client/shared/ ./shared/
 
+# Development stage
+FROM base as development
+WORKDIR /app
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--prefix", "client"]
+
+# Builder stage
+FROM base as builder
+WORKDIR /app
 # Build the frontend
 RUN npm run build
 

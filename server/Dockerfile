@@ -3,17 +3,18 @@ FROM node:18-alpine as base
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy root config files
 COPY tsconfig.json ./
 COPY drizzle.config.ts ./
 
-# Install dependencies
+# Copy server package files and install dependencies
+COPY server/package*.json ./server/
+WORKDIR /app/server
 RUN npm ci
 
-# Copy server source code and shared files
+# Go back to root and copy source files
+WORKDIR /app
 COPY server/ ./server/
-COPY server/shared/ ./shared/
 
 # Development stage
 FROM base as development
@@ -28,7 +29,9 @@ FROM base as production
 RUN apk add --no-cache curl
 
 # Install only production dependencies
+WORKDIR /app/server
 RUN npm ci --only=production && npm cache clean --force
+WORKDIR /app
 
 # Create a non-root user
 RUN addgroup -g 1001 -S nodejs
