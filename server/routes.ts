@@ -353,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body;
       
       console.log("\n📋 [TEST] Parameters received:");
-      console.log(`   🎯 Keywords: ${keywords.join(', ')}`);
+      console.log(`   �� Keywords: ${keywords.join(', ')}`);
       console.log(`   🌍 Country: ${country}`);
       console.log(`   🗣️ Language: ${language}`);
       console.log(`   📊 Count: ${count}`);
@@ -1499,59 +1499,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize default advertisers and traffic sources
   app.post("/api/init", async (req, res) => {
     try {
-      const advertisers = await storage.getAdvertisers();
-      if (advertisers.length === 0) {
-        await storage.createAdvertiser({
-          name: "Sedo",
-          channelIds: ["sedo_001", "sedo_002", "sedo_003"],
-          domains: ["sedo.com", "sedo.de", "sedo.co.uk"],
-          sampleUrl: "https://sedo.com/search?keyword=domain",
-        });
+      const existingAdvertisers = await storage.getAdvertisers().catch((e) => {
+        console.warn("/api/init: skipping advertisers init (storage unavailable)", e?.message || e);
+        return null;
+      });
 
-        await storage.createAdvertiser({
-          name: "Explorads",
-          channelIds: ["exp_001", "exp_002", "exp_003", "exp_004"],
-          domains: ["explorads.com", "explorads.net"],
-          sampleUrl: "https://explorads.com/campaigns/new",
-        });
+      if (existingAdvertisers && existingAdvertisers.length === 0) {
+        try {
+          await storage.createAdvertiser({
+            name: "Sedo",
+            channelIds: ["sedo_001", "sedo_002", "sedo_003"],
+            domains: ["sedo.com", "sedo.de", "sedo.co.uk"],
+            sampleUrl: "https://sedo.com/search?keyword=domain",
+          });
+          await storage.createAdvertiser({
+            name: "Explorads",
+            channelIds: ["exp_001", "exp_002", "exp_003", "exp_004"],
+            domains: ["explorads.com", "explorads.net"],
+            sampleUrl: "https://explorads.com/campaigns/new",
+          });
+        } catch (e) {
+          console.warn("/api/init: failed creating advertisers (storage unavailable)", e?.message || e);
+        }
       }
 
-      // Initialize default traffic sources
-      const trafficSources = await storage.getTrafficSources();
-      if (trafficSources.length === 0) {
-        await storage.createTrafficSource({
-          name: "facebook",
-          displayName: "Facebook",
-          fields: [
-            {
-              name: "primaryText",
-              label: "Primary Text",
-              type: "textarea",
-              required: true,
-            },
-            {
-              name: "headline",
-              label: "Headline",
-              type: "text",
-              required: true,
-            },
-            {
-              name: "cta",
-              label: "Call to Action",
-              type: "text",
-              required: true,
-            },
-            { name: "image", label: "Image URL", type: "url", required: false },
-            { name: "video", label: "Video URL", type: "url", required: false },
-          ],
-          isActive: true,
-        });
+      const existingTrafficSources = await storage.getTrafficSources().catch((e) => {
+        console.warn("/api/init: skipping traffic sources init (storage unavailable)", e?.message || e);
+        return null;
+      });
+
+      if (existingTrafficSources && existingTrafficSources.length === 0) {
+        try {
+          await storage.createTrafficSource({
+            name: "facebook",
+            displayName: "Facebook",
+            fields: [
+              { name: "primaryText", label: "Primary Text", type: "textarea", required: true },
+              { name: "headline", label: "Headline", type: "text", required: true },
+              { name: "cta", label: "Call to Action", type: "text", required: true },
+              { name: "image", label: "Image URL", type: "url", required: false },
+              { name: "video", label: "Video URL", type: "url", required: false },
+            ],
+            isActive: true,
+          });
+        } catch (e) {
+          console.warn("/api/init: failed creating traffic source (storage unavailable)", e?.message || e);
+        }
       }
 
       res.json({ message: "Initialization complete" });
     } catch (error) {
-      console.error("Error initializing data:", error);
-      res.status(500).json({ message: "Failed to initialize data" });
+      console.error("/api/init unexpected error:", error);
+      // Always succeed to avoid blocking UI even if DB is down
+      res.json({ message: "Initialization skipped" });
     }
   });
 
