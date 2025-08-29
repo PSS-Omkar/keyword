@@ -1,7 +1,7 @@
 import { generateKeywordIdeas, generateFallbackKeywords } from './googleKeywordPlanner.js';
-import { COUNTRIES, LANGUAGES } from './shared/countries-languages.js';
+import { COUNTRIES, LANGUAGES } from '../shared/countries-languages.js';
 import type { IStorage } from './storage.js';
-import type { Project } from './shared/schema.js';
+import type { Project } from '../shared/schema.js';
 
 export interface ProjectStatusChangeEvent {
   project: Project;

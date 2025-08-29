@@ -12,14 +12,14 @@ import {
   projects,
   keywords,
   insertKeywordSchema,
-} from "./shared/schema.js";
-import { COUNTRIES, LANGUAGES } from "./shared/countries-languages.js";
+} from "../shared/schema.js";
+import { COUNTRIES, LANGUAGES } from "../shared/countries-languages.js";
 import { z } from "zod";
 // Google Keywords service integration
 import axios from "axios";
 import { OAuth2Client } from "google-auth-library";
 import { handleProjectStatusChange } from './projectStatusMonitor.js';
-import type { Project } from './shared/schema.js';
+import type { Project } from '../shared/schema.js';
 
 const MICRO_TOKEN_ID = 'micropets';
 const TO_CURRENCY = 'usd';

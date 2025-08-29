@@ -23,7 +23,7 @@ import {
   type InsertTrafficSource,
   type MetaCampaign,
   type InsertMetaCampaign,
-} from "./shared/schema.js";
+} from "../shared/schema.js";
 import { db } from "./db";
 import { eq, desc, and, sql, inArray } from "drizzle-orm";
 
