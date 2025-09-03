@@ -593,4 +593,192 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+class MockStorage implements IStorage {
+  private usersMap = new Map<string, User>();
+  private projectsArr: Project[] = [] as any;
+  private advertisersArr: Advertiser[] = [] as any;
+  private campaignsArr: Campaign[] = [] as any;
+  private campaignGroupsArr: CampaignGroup[] = [] as any;
+  private keywordsArr: Keyword[] = [] as any;
+  private trafficSourcesArr: TrafficSource[] = [] as any;
+  private metaCampaignsArr: MetaCampaign[] = [] as any;
+
+  async getUser(id: string): Promise<User | undefined> {
+    if (!this.usersMap.has(id)) {
+      const u = { id, email: "test@example.com", firstName: "Test", lastName: "User", createdAt: new Date(), updatedAt: new Date() } as any;
+      this.usersMap.set(id, u as User);
+    }
+    return this.usersMap.get(id) as User | undefined;
+  }
+  async upsertUser(user: UpsertUser): Promise<User> {
+    const existing = (await this.getUser(user.id)) as any;
+    const merged = { ...existing, ...user, updatedAt: new Date() } as any;
+    this.usersMap.set(user.id, merged);
+    return merged as User;
+  }
+
+  async getProjects(_userId: string): Promise<Project[]> { return this.projectsArr; }
+  async getProject(id: number, _userId: string): Promise<Project | undefined> { return this.projectsArr.find(p => p.id === id); }
+  async createProject(project: InsertProject, userId: string): Promise<Project> {
+    const id = (this.projectsArr.at(-1)?.id || 0) + 1;
+    const p: any = { id, userId, status: project.status ?? "active", createdAt: new Date(), updatedAt: new Date(), ...project };
+    this.projectsArr.push(p);
+    return p;
+  }
+  async updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined> {
+    const idx = this.projectsArr.findIndex(p => p.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.projectsArr[idx], ...project, updatedAt: new Date() };
+    this.projectsArr[idx] = updated;
+    return updated;
+  }
+  async deleteProject(id: number): Promise<boolean> {
+    const len = this.projectsArr.length;
+    this.projectsArr = this.projectsArr.filter(p => p.id !== id);
+    return this.projectsArr.length < len;
+  }
+
+  async getCampaigns(projectId: number | null): Promise<Campaign[]> { return projectId ? this.campaignsArr.filter(c => c.projectId === projectId) : this.campaignsArr; }
+  async getCampaign(id: number): Promise<Campaign | undefined> { return this.campaignsArr.find(c => c.id === id); }
+  async createCampaign(campaign: InsertCampaign): Promise<Campaign> {
+    const id = (this.campaignsArr.at(-1)?.id || 0) + 1;
+    const c: any = { id, status: campaign.status ?? "active", createdAt: new Date(), updatedAt: new Date(), ...campaign };
+    this.campaignsArr.push(c);
+    return c;
+  }
+  async updateCampaign(id: number, campaign: Partial<InsertCampaign>): Promise<Campaign | undefined> {
+    const idx = this.campaignsArr.findIndex(c => c.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.campaignsArr[idx], ...campaign, updatedAt: new Date() };
+    this.campaignsArr[idx] = updated;
+    return updated;
+  }
+  async deleteCampaign(id: number): Promise<boolean> {
+    const len = this.campaignsArr.length;
+    this.campaignsArr = this.campaignsArr.filter(c => c.id !== id);
+    return this.campaignsArr.length < len;
+  }
+
+  async getCampaignGroups(projectId: number | null, _userId: string): Promise<CampaignGroup[]> { return projectId ? this.campaignGroupsArr.filter(g => g.projectId === projectId) : this.campaignGroupsArr; }
+  async getCampaignGroup(id: number): Promise<CampaignGroup | undefined> { return this.campaignGroupsArr.find(g => g.id === id); }
+  async createCampaignGroup(cg: InsertCampaignGroup, userId: string): Promise<CampaignGroup> {
+    const id = (this.campaignGroupsArr.at(-1)?.id || 0) + 1;
+    const g: any = { id, userId, status: cg.status ?? "active", createdAt: new Date(), updatedAt: new Date(), ...cg };
+    this.campaignGroupsArr.push(g);
+    return g;
+  }
+  async updateCampaignGroup(id: number, cg: Partial<InsertCampaignGroup>): Promise<CampaignGroup | undefined> {
+    const idx = this.campaignGroupsArr.findIndex(g => g.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.campaignGroupsArr[idx], ...cg, updatedAt: new Date() };
+    this.campaignGroupsArr[idx] = updated;
+    return updated;
+  }
+  async deleteCampaignGroup(id: number): Promise<boolean> {
+    const len = this.campaignGroupsArr.length;
+    this.campaignGroupsArr = this.campaignGroupsArr.filter(g => g.id !== id);
+    return this.campaignGroupsArr.length < len;
+  }
+
+  async getAdvertisers(): Promise<Advertiser[]> { return this.advertisersArr; }
+  async getAdvertiser(id: number): Promise<Advertiser | undefined> { return this.advertisersArr.find(a => a.id === id); }
+  async createAdvertiser(ad: InsertAdvertiser): Promise<Advertiser> {
+    const id = (this.advertisersArr.at(-1)?.id || 0) + 1;
+    const a: any = { id, status: ad.status ?? "active", createdAt: new Date(), updatedAt: new Date(), ...ad };
+    this.advertisersArr.push(a);
+    return a;
+  }
+  async updateAdvertiser(id: number, ad: Partial<InsertAdvertiser>): Promise<Advertiser | undefined> {
+    const idx = this.advertisersArr.findIndex(a => a.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.advertisersArr[idx], ...ad, updatedAt: new Date() };
+    this.advertisersArr[idx] = updated;
+    return updated;
+  }
+
+  async getKeywords(projectId: number | null): Promise<Keyword[]> { return projectId ? this.keywordsArr.filter(k => k.projectId === projectId) : this.keywordsArr; }
+  async getKeyword(id: number): Promise<Keyword | undefined> { return this.keywordsArr.find(k => k.id === id); }
+  async createKeyword(keyword: InsertKeyword): Promise<Keyword> {
+    const id = (this.keywordsArr.at(-1)?.id || 0) + 1;
+    const k: any = { id, createdAt: new Date(), updatedAt: new Date(), ...keyword };
+    this.keywordsArr.push(k);
+    return k;
+  }
+  async createKeywords(keywordList: InsertKeyword[]): Promise<Keyword[]> { return Promise.all(keywordList.map(k => this.createKeyword(k))); }
+  async updateKeyword(id: number, keyword: Partial<InsertKeyword>): Promise<Keyword | undefined> {
+    const idx = this.keywordsArr.findIndex(k => k.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.keywordsArr[idx], ...keyword, updatedAt: new Date() };
+    this.keywordsArr[idx] = updated;
+    return updated;
+  }
+  async deleteKeyword(id: number): Promise<boolean> {
+    const len = this.keywordsArr.length;
+    this.keywordsArr = this.keywordsArr.filter(k => k.id !== id);
+    return this.keywordsArr.length < len;
+  }
+  async deleteKeywords(ids: number[]): Promise<boolean> {
+    const len = this.keywordsArr.length;
+    const set = new Set(ids);
+    this.keywordsArr = this.keywordsArr.filter(k => !set.has(k.id as any));
+    return this.keywordsArr.length < len;
+  }
+  async deleteKeywordsByProject(projectId: number): Promise<boolean> {
+    const len = this.keywordsArr.length;
+    this.keywordsArr = this.keywordsArr.filter(k => k.projectId !== projectId);
+    return this.keywordsArr.length < len;
+  }
+
+  async getTrafficSources(): Promise<TrafficSource[]> { return this.trafficSourcesArr; }
+  async getTrafficSource(id: number): Promise<TrafficSource | undefined> { return this.trafficSourcesArr.find(t => t.id === id); }
+  async createTrafficSource(ts: InsertTrafficSource): Promise<TrafficSource> {
+    const id = (this.trafficSourcesArr.at(-1)?.id || 0) + 1;
+    const t: any = { id, isActive: true, createdAt: new Date(), updatedAt: new Date(), ...ts };
+    this.trafficSourcesArr.push(t);
+    return t;
+  }
+  async updateTrafficSource(id: number, ts: Partial<InsertTrafficSource>): Promise<TrafficSource | undefined> {
+    const idx = this.trafficSourcesArr.findIndex(t => t.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.trafficSourcesArr[idx], ...ts, updatedAt: new Date() };
+    this.trafficSourcesArr[idx] = updated;
+    return updated;
+  }
+  async deleteTrafficSource(id: number): Promise<boolean> {
+    const len = this.trafficSourcesArr.length;
+    this.trafficSourcesArr = this.trafficSourcesArr.filter(t => t.id !== id);
+    return this.trafficSourcesArr.length < len;
+  }
+
+  async getMetaCampaigns(_userId: string): Promise<MetaCampaign[]> { return this.metaCampaignsArr; }
+  async getMetaCampaign(id: number): Promise<MetaCampaign | undefined> { return this.metaCampaignsArr.find(m => m.id === id); }
+  async createMetaCampaign(mc: InsertMetaCampaign, userId: string): Promise<MetaCampaign> {
+    const id = (this.metaCampaignsArr.at(-1)?.id || 0) + 1;
+    const m: any = { id, userId, status: mc.status ?? "active", createdAt: new Date(), updatedAt: new Date(), ...mc };
+    this.metaCampaignsArr.push(m);
+    return m;
+  }
+  async updateMetaCampaign(id: number, mc: Partial<InsertMetaCampaign>): Promise<MetaCampaign | undefined> {
+    const idx = this.metaCampaignsArr.findIndex(m => m.id === id);
+    if (idx === -1) return undefined;
+    const updated: any = { ...this.metaCampaignsArr[idx], ...mc, updatedAt: new Date() };
+    this.metaCampaignsArr[idx] = updated;
+    return updated;
+  }
+  async deleteMetaCampaign(id: number): Promise<boolean> {
+    const len = this.metaCampaignsArr.length;
+    this.metaCampaignsArr = this.metaCampaignsArr.filter(m => m.id !== id);
+    return this.metaCampaignsArr.length < len;
+  }
+
+  async getProjectStats(_userId: string) {
+    return {
+      totalProjects: this.projectsArr.length,
+      activeCampaigns: this.campaignsArr.filter(c => c.status === "active").length,
+      advertisers: this.advertisersArr.length,
+      countries: new Set(this.projectsArr.flatMap((p: any) => p.countries || [])).size,
+    };
+  }
+}
+
+export const storage: IStorage = (process.env.NO_DB === '1' || process.env.MOCK_DATA === '1') ? new MockStorage() : new DatabaseStorage();

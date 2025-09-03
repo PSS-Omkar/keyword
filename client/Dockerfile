@@ -1,52 +1,20 @@
-# Frontend Dockerfile
-FROM node:18-alpine as base
+# Client (React + Vite) - Development Dockerfile
+FROM node:20-alpine
+
+# Ensure dependencies for watchers work well inside containers
+ENV CHOKIDAR_USEPOLLING=true
+ENV WATCHPACK_POLLING=true
 
 WORKDIR /app
 
-# Copy root config files
-COPY vite.config.ts ./
-COPY tailwind.config.ts ./
-COPY postcss.config.js ./
-COPY components.json ./
-COPY tsconfig.json ./
+# Install deps first (uses cached layer when only src changes)
+COPY package.json package-lock.json* ./
+RUN npm install
 
-# Copy client package files and install dependencies
-COPY client/package*.json ./client/
-WORKDIR /app/client
-RUN npm ci
+# Copy the rest of the app
+COPY . .
 
-# Go back to root and copy source files
-WORKDIR /app
-COPY client/ ./client/
+EXPOSE 5173
 
-# Development stage
-FROM base as development
-WORKDIR /app
-EXPOSE 3000
-CMD ["npm", "run", "dev", "--prefix", "client"]
-
-# Builder stage
-FROM base as builder
-WORKDIR /app
-# Build the frontend
-RUN npm run build
-
-# Production stage
-FROM nginx:alpine
-
-# Install curl for health checks
-RUN apk add --no-cache curl
-
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY client/nginx.conf /etc/nginx/nginx.conf
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost || exit 1
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Run Vite in dev mode and listen on all interfaces for Docker
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -117,10 +117,12 @@ export function ProjectsTable() {
   });
 
   const filteredProjects = projects?.filter((project: any) => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.topics.some((topic: string) => topic.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesAdvertiser = selectedAdvertiser === "all" || 
-                             advertisers?.find((adv: any) => adv.id === project.advertiserId)?.name === selectedAdvertiser;
+    const name = (project?.name || "").toLowerCase();
+    const topics: string[] = Array.isArray(project?.topics) ? project.topics : [];
+    const matchesSearch = name.includes(searchTerm.toLowerCase()) ||
+      topics.some((topic: string) => (topic || "").toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesAdvertiser = selectedAdvertiser === "all" ||
+      (advertisers?.find((adv: any) => adv.id === project?.advertiserId)?.name === selectedAdvertiser);
     return matchesSearch && matchesAdvertiser;
   }) || [];
 
@@ -245,42 +247,42 @@ export function ProjectsTable() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {project.topics.slice(0, 2).map((topic: string, index: number) => (
+                        {(Array.isArray(project.topics) ? project.topics : []).slice(0, 2).map((topic: string, index: number) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {topic}
                           </Badge>
                         ))}
-                        {project.topics.length > 2 && (
+                        {(Array.isArray(project.topics) ? project.topics : []).length > 2 && (
                           <Badge variant="outline" className="text-xs">
-                            +{project.topics.length - 2}
+                            +{(Array.isArray(project.topics) ? project.topics : []).length - 2}
                           </Badge>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {project.languages.slice(0, 3).map((language: string, index: number) => (
+                        {(Array.isArray(project.languages) ? project.languages : []).slice(0, 3).map((language: string, index: number) => (
                           <Badge key={index} variant="outline" className="text-xs">
                             {language}
                           </Badge>
                         ))}
-                        {project.languages.length > 3 && (
+                        {(Array.isArray(project.languages) ? project.languages : []).length > 3 && (
                           <Badge variant="outline" className="text-xs">
-                            +{project.languages.length - 3}
+                            +{(Array.isArray(project.languages) ? project.languages : []).length - 3}
                           </Badge>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {project.countries.slice(0, 3).map((country: string, index: number) => (
+                        {(Array.isArray(project.countries) ? project.countries : []).slice(0, 3).map((country: string, index: number) => (
                           <Badge key={index} variant="outline" className="text-xs">
                             {country}
                           </Badge>
                         ))}
-                        {project.countries.length > 3 && (
+                        {(Array.isArray(project.countries) ? project.countries : []).length > 3 && (
                           <Badge variant="outline" className="text-xs">
-                            +{project.countries.length - 3}
+                            +{(Array.isArray(project.countries) ? project.countries : []).length - 3}
                           </Badge>
                         )}
                       </div>
@@ -296,7 +298,7 @@ export function ProjectsTable() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Select
-                        value={project.status}
+                        value={project.status || 'draft'}
                         onValueChange={(newStatus) => {
                           if (newStatus === 'active') {
                             setPendingStatusChange({ id: project.id, status: newStatus });

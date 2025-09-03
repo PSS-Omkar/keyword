@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
@@ -22,13 +21,20 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: {
+      server,
+      clientPort: Number(process.env.HMR_CLIENT_PORT) || Number(process.env.PORT) || 5000,
+      host: process.env.HMR_HOST || "localhost",
+      protocol: process.env.HMR_PROTOCOL || "ws",
+    },
     allowedHosts: true as const,
   };
 
+  const clientRoot = path.resolve(import.meta.dirname, "..", "client");
+
   const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
+    configFile: path.resolve(clientRoot, "vite.config.ts"),
+    root: clientRoot,
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {

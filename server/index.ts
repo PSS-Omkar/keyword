@@ -2,7 +2,7 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import fileUpload from "express-fileupload";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic, log } from "./viteMiddleware";
 
 const app = express();
 app.use(express.json());
@@ -59,18 +59,22 @@ app.use((req, res, next) => {
 
 (async () => {
   // Initialize hardcoded user in database
-  const { db } = await import("./db.js");
-  const { users } = await import("../shared/schema.js");
-
+  let dbConnected = false;
   try {
+    const { db } = await import("./db.js");
+    const { users } = await import("./shared/schema.js");
+
     await db.insert(users).values({
       id: 'hardcoded-user-123',
       email: 'test@example.com',
       firstName: 'Test',
       lastName: 'User'
     }).onConflictDoNothing();
+    dbConnected = true;
+    console.log("✅ Database connected successfully");
   } catch (error) {
-    console.log("Hardcoded user already exists or error creating:", error);
+    console.log("⚠️ Database connection failed, running without database:", error.message);
+    dbConnected = false;
   }
 
   // Add basic API endpoints before complex routes
@@ -108,7 +112,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = Number(process.env.PORT) || 5000;
   server.listen(port, () => {
     log(`serving on port ${port}`);
   });
