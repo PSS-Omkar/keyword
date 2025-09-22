@@ -1,49 +1,33 @@
-# Backend Dockerfile
-FROM node:18-alpine as base
-
+# Backend Dockerfile (server-only)
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
-COPY drizzle.config.ts ./
-
 # Install dependencies
+COPY server/package*.json ./
 RUN npm ci
 
-# Copy server source code and shared files
+# Copy sources
 COPY server/ ./server/
-COPY server/shared/ ./shared/
+COPY shared/ ./shared/
 
-# Development stage
-FROM base as development
-ENV NODE_ENV=development
-EXPOSE 5000 9229
-CMD ["npx", "tsx", "watch", "server/index.ts"]
+# Build
+RUN npm run --prefix server build || true
 
-# Production stage  
-FROM base as production
+# Runtime image
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Copy node_modules and built files
+COPY --from=builder /app/server/node_modules ./server/node_modules
+COPY --from=builder /app/server/package*.json ./server/
+COPY --from=builder /app/server/dist ./dist
+COPY --from=builder /app/server/server ./server
+COPY --from=builder /app/shared ./shared
 
-# Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Create a non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
-USER nodejs
-
-# Expose the port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/api/health || exit 1
+# Default to memory mode unless DATABASE_URL is provided
+ENV STORAGE_MODE=memory
 
-# Start the application
-CMD ["npx", "tsx", "server/index.ts"]
+CMD ["node", "dist/index.js"]

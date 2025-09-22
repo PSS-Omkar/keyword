@@ -24,65 +24,99 @@ import {
   type MetaCampaign,
   type InsertMetaCampaign,
 } from "./shared/schema.js";
-import { db } from "./db";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Project operations
   getProjects(userId: string): Promise<Project[]>;
   getProject(id: number, userId: string): Promise<Project | undefined>;
   createProject(project: InsertProject, userId: string): Promise<Project>;
-  updateProject(id: number, project: Partial<InsertProject>, userId: string): Promise<Project | undefined>;
+  updateProject(
+    id: number,
+    project: Partial<InsertProject>,
+    userId: string,
+  ): Promise<Project | undefined>;
   deleteProject(id: number, userId: string): Promise<boolean>;
-  
+
   // Campaign operations
   getCampaigns(projectId: number | null, userId: string): Promise<Campaign[]>;
   getCampaign(id: number, userId: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign, userId: string): Promise<Campaign>;
-  updateCampaign(id: number, campaign: Partial<InsertCampaign>, userId: string): Promise<Campaign | undefined>;
+  updateCampaign(
+    id: number,
+    campaign: Partial<InsertCampaign>,
+    userId: string,
+  ): Promise<Campaign | undefined>;
   deleteCampaign(id: number, userId: string): Promise<boolean>;
-  
+
   // Campaign Group operations
-  getCampaignGroups(projectId: number | null, userId: string): Promise<CampaignGroup[]>;
+  getCampaignGroups(
+    projectId: number | null,
+    userId: string,
+  ): Promise<CampaignGroup[]>;
   getCampaignGroup(id: number, userId: string): Promise<CampaignGroup | undefined>;
-  createCampaignGroup(campaignGroup: InsertCampaignGroup, userId: string): Promise<CampaignGroup>;
-  updateCampaignGroup(id: number, campaignGroup: Partial<InsertCampaignGroup>, userId: string): Promise<CampaignGroup | undefined>;
+  createCampaignGroup(
+    campaignGroup: InsertCampaignGroup,
+    userId: string,
+  ): Promise<CampaignGroup>;
+  updateCampaignGroup(
+    id: number,
+    campaignGroup: Partial<InsertCampaignGroup>,
+    userId: string,
+  ): Promise<CampaignGroup | undefined>;
   deleteCampaignGroup(id: number, userId: string): Promise<boolean>;
-  
+
   // Advertiser operations
   getAdvertisers(): Promise<Advertiser[]>;
   getAdvertiser(id: number): Promise<Advertiser | undefined>;
   createAdvertiser(advertiser: InsertAdvertiser): Promise<Advertiser>;
-  updateAdvertiser(id: number, advertiser: Partial<InsertAdvertiser>): Promise<Advertiser | undefined>;
-  
+  updateAdvertiser(
+    id: number,
+    advertiser: Partial<InsertAdvertiser>,
+  ): Promise<Advertiser | undefined>;
+
   // Keyword operations
   getKeywords(projectId: number | null, userId: string): Promise<Keyword[]>;
   getKeyword(id: number, userId: string): Promise<Keyword | undefined>;
   createKeyword(keyword: InsertKeyword, userId: string): Promise<Keyword>;
   createKeywords(keywords: InsertKeyword[], userId: string): Promise<Keyword[]>;
-  updateKeyword(id: number, keyword: Partial<InsertKeyword>, userId: string): Promise<Keyword | undefined>;
+  updateKeyword(
+    id: number,
+    keyword: Partial<InsertKeyword>,
+    userId: string,
+  ): Promise<Keyword | undefined>;
   deleteKeyword(id: number, userId: string): Promise<boolean>;
   deleteKeywords(ids: number[], userId: string): Promise<boolean>;
   deleteKeywordsByProject(projectId: number, userId: string): Promise<boolean>;
-  
+
   // Traffic Source operations
   getTrafficSources(): Promise<TrafficSource[]>;
   getTrafficSource(id: number): Promise<TrafficSource | undefined>;
   createTrafficSource(trafficSource: InsertTrafficSource): Promise<TrafficSource>;
-  updateTrafficSource(id: number, trafficSource: Partial<InsertTrafficSource>): Promise<TrafficSource | undefined>;
+  updateTrafficSource(
+    id: number,
+    trafficSource: Partial<InsertTrafficSource>,
+  ): Promise<TrafficSource | undefined>;
   deleteTrafficSource(id: number): Promise<boolean>;
-  
+
   // Meta Campaign operations
   getMetaCampaigns(userId: string): Promise<MetaCampaign[]>;
   getMetaCampaign(id: number, userId: string): Promise<MetaCampaign | undefined>;
-  createMetaCampaign(metaCampaign: InsertMetaCampaign, userId: string): Promise<MetaCampaign>;
-  updateMetaCampaign(id: number, metaCampaign: Partial<InsertMetaCampaign>, userId: string): Promise<MetaCampaign | undefined>;
+  createMetaCampaign(
+    metaCampaign: InsertMetaCampaign,
+    userId: string,
+  ): Promise<MetaCampaign>;
+  updateMetaCampaign(
+    id: number,
+    metaCampaign: Partial<InsertMetaCampaign>,
+    userId: string,
+  ): Promise<MetaCampaign | undefined>;
   deleteMetaCampaign(id: number, userId: string): Promise<boolean>;
-  
+
   // Stats
   getProjectStats(userId: string): Promise<{
     totalProjects: number;
@@ -92,14 +126,22 @@ export interface IStorage {
   }>;
 }
 
+// Lazy DB import to avoid connecting when running in in-memory mode
+async function getDb() {
+  const mod = await import("./db.js");
+  return mod.db as any;
+}
+
 export class DatabaseStorage implements IStorage {
   // User operations (required for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
+    const db = await getDb();
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const db = await getDb();
     const [user] = await db
       .insert(users)
       .values(userData)
@@ -116,12 +158,9 @@ export class DatabaseStorage implements IStorage {
 
   // Project operations
   async getProjects(userId: string): Promise<Project[]> {
-    // Allow system user to access all projects (for API access)
+    const db = await getDb();
     if (userId === "system") {
-      return await db
-        .select()
-        .from(projects)
-        .orderBy(desc(projects.createdAt));
+      return await db.select().from(projects).orderBy(desc(projects.createdAt));
     }
     return await db
       .select()
@@ -131,7 +170,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProject(id: number, userId: string): Promise<Project | undefined> {
-    // Allow system user to access any project (for API access)
+    const db = await getDb();
     if (userId === "system") {
       const [project] = await db.select().from(projects).where(eq(projects.id, id));
       return project;
@@ -144,6 +183,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProject(project: InsertProject, userId: string): Promise<Project> {
+    const db = await getDb();
     const [newProject] = await db
       .insert(projects)
       .values({ ...project, userId })
@@ -151,7 +191,12 @@ export class DatabaseStorage implements IStorage {
     return newProject;
   }
 
-  async updateProject(id: number, project: Partial<InsertProject>, userId: string): Promise<Project | undefined> {
+  async updateProject(
+    id: number,
+    project: Partial<InsertProject>,
+    userId: string,
+  ): Promise<Project | undefined> {
+    const db = await getDb();
     const [updatedProject] = await db
       .update(projects)
       .set({ ...project, updatedAt: new Date() })
@@ -161,6 +206,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProject(id: number, userId: string): Promise<boolean> {
+    const db = await getDb();
     const result = await db
       .delete(projects)
       .where(and(eq(projects.id, id), eq(projects.userId, userId)));
@@ -169,50 +215,44 @@ export class DatabaseStorage implements IStorage {
 
   // Campaign operations
   async getCampaigns(projectId: number | null, userId: string): Promise<Campaign[]> {
-    // Allow system user to access any project's campaigns (for API access)
+    const db = await getDb();
     if (userId === "system") {
       if (projectId !== null) {
-        return await db
-          .select()
-          .from(campaigns)
-          .where(eq(campaigns.projectId, projectId));
+        return await db.select().from(campaigns).where(eq(campaigns.projectId, projectId));
       } else {
-        return await db
-          .select()
-          .from(campaigns);
+        return await db.select().from(campaigns);
       }
     }
-    
+
     if (projectId !== null) {
       return await db
         .select()
         .from(campaigns)
         .leftJoin(projects, eq(campaigns.projectId, projects.id))
         .where(and(eq(campaigns.projectId, projectId), eq(projects.userId, userId)))
-        .then(rows => rows.map(row => row.campaigns));
+        .then((rows: any[]) => rows.map((row) => row.campaigns));
     } else {
-      // Get all campaigns for the user across all projects
       return await db
         .select()
         .from(campaigns)
         .leftJoin(projects, eq(campaigns.projectId, projects.id))
         .where(eq(projects.userId, userId))
-        .then(rows => rows.map(row => row.campaigns));
+        .then((rows: any[]) => rows.map((row) => row.campaigns));
     }
   }
 
   async getCampaign(id: number, userId: string): Promise<Campaign | undefined> {
+    const db = await getDb();
     const [campaign] = await db
       .select()
       .from(campaigns)
       .leftJoin(projects, eq(campaigns.projectId, projects.id))
       .where(and(eq(campaigns.id, id), eq(projects.userId, userId)))
-      .then(rows => rows.map(row => row.campaigns));
+      .then((rows: any[]) => rows.map((row) => row.campaigns));
     return campaign;
   }
 
   async createCampaign(campaign: InsertCampaign, userId: string): Promise<Campaign> {
-    // Verify user owns the project
     if (!campaign.projectId) {
       throw new Error("Project ID is required");
     }
@@ -220,21 +260,21 @@ export class DatabaseStorage implements IStorage {
     if (!project) {
       throw new Error("Project not found or access denied");
     }
-    
-    const [newCampaign] = await db
-      .insert(campaigns)
-      .values(campaign)
-      .returning();
+    const db = await getDb();
+    const [newCampaign] = await db.insert(campaigns).values(campaign).returning();
     return newCampaign;
   }
 
-  async updateCampaign(id: number, campaign: Partial<InsertCampaign>, userId: string): Promise<Campaign | undefined> {
-    // Verify user owns the campaign through project
+  async updateCampaign(
+    id: number,
+    campaign: Partial<InsertCampaign>,
+    userId: string,
+  ): Promise<Campaign | undefined> {
     const existingCampaign = await this.getCampaign(id, userId);
     if (!existingCampaign) {
       return undefined;
     }
-    
+    const db = await getDb();
     const [updatedCampaign] = await db
       .update(campaigns)
       .set({ ...campaign, updatedAt: new Date() })
@@ -244,35 +284,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCampaign(id: number, userId: string): Promise<boolean> {
-    // Verify user owns the campaign through project
     const campaign = await this.getCampaign(id, userId);
     if (!campaign) {
       return false;
     }
-    
+    const db = await getDb();
     const result = await db.delete(campaigns).where(eq(campaigns.id, id));
     return (result.rowCount || 0) > 0;
   }
 
   // Advertiser operations
   async getAdvertisers(): Promise<Advertiser[]> {
+    const db = await getDb();
     return await db.select().from(advertisers).orderBy(advertisers.name);
   }
 
   async getAdvertiser(id: number): Promise<Advertiser | undefined> {
+    const db = await getDb();
     const [advertiser] = await db.select().from(advertisers).where(eq(advertisers.id, id));
     return advertiser;
   }
 
   async createAdvertiser(advertiser: InsertAdvertiser): Promise<Advertiser> {
-    const [newAdvertiser] = await db
-      .insert(advertisers)
-      .values(advertiser)
-      .returning();
+    const db = await getDb();
+    const [newAdvertiser] = await db.insert(advertisers).values(advertiser).returning();
     return newAdvertiser;
   }
 
-  async updateAdvertiser(id: number, advertiser: Partial<InsertAdvertiser>): Promise<Advertiser | undefined> {
+  async updateAdvertiser(
+    id: number,
+    advertiser: Partial<InsertAdvertiser>,
+  ): Promise<Advertiser | undefined> {
+    const db = await getDb();
     const [updatedAdvertiser] = await db
       .update(advertisers)
       .set({ ...advertiser, updatedAt: new Date() })
@@ -283,146 +326,117 @@ export class DatabaseStorage implements IStorage {
 
   // Keyword operations
   async getKeywords(projectId: number | null, userId: string): Promise<Keyword[]> {
+    const db = await getDb();
     if (projectId === null) {
-      // For API access (system user), return all keywords
       if (userId === "system") {
         return await db.select().from(keywords);
       }
-      // For regular users, return keywords from all their projects
       const userProjects = await this.getProjects(userId);
-      const projectIds = userProjects.map(p => p.id);
+      const projectIds = userProjects.map((p) => p.id);
       if (projectIds.length === 0) {
         return [];
       }
       return await db.select().from(keywords).where(inArray(keywords.projectId, projectIds));
     }
-    
-    // Verify project ownership
+
     const project = await this.getProject(projectId, userId);
     if (!project) {
       throw new Error("Project not found or access denied");
     }
-    
+
     return await db.select().from(keywords).where(eq(keywords.projectId, projectId));
   }
 
   async getKeyword(id: number, userId: string): Promise<Keyword | undefined> {
-    console.log("getKeyword called with id:", id, "type:", typeof id, "userId:", userId);
-    
     if (!id || isNaN(id) || id <= 0) {
-      console.error("Invalid keyword ID in getKeyword:", id);
       return undefined;
     }
-    
-    const [result] = await db.select({
-        keyword: keywords,
-        project: projects
-      })
+    const db = await getDb();
+    const [result] = await db
+      .select({ keyword: keywords, project: projects })
       .from(keywords)
       .innerJoin(projects, eq(keywords.projectId, projects.id))
       .where(and(eq(keywords.id, id), eq(projects.userId, userId)));
-    
-    console.log("getKeyword result:", result);
     return result?.keyword;
   }
 
   async createKeyword(keyword: InsertKeyword, userId: string): Promise<Keyword> {
-    // Verify project ownership
     const project = await this.getProject(keyword.projectId, userId);
     if (!project) {
       throw new Error("Project not found or access denied");
     }
-
+    const db = await getDb();
     const [newKeyword] = await db.insert(keywords).values(keyword).returning();
     return newKeyword;
   }
 
   async createKeywords(keywordList: InsertKeyword[], userId: string): Promise<Keyword[]> {
     if (keywordList.length === 0) return [];
-    
-    // Verify project ownership for all keywords
-    const projectIds = [...new Set(keywordList.map(k => k.projectId))];
+    const projectIds = [...new Set(keywordList.map((k) => k.projectId))];
     for (const projectId of projectIds) {
       const project = await this.getProject(projectId, userId);
       if (!project) {
         throw new Error(`Project ${projectId} not found or access denied`);
       }
     }
-
+    const db = await getDb();
     return await db.insert(keywords).values(keywordList).returning();
   }
 
-  async updateKeyword(id: number, keyword: Partial<InsertKeyword>, userId: string): Promise<Keyword | undefined> {
-    // Verify project ownership
+  async updateKeyword(
+    id: number,
+    keyword: Partial<InsertKeyword>,
+    userId: string,
+  ): Promise<Keyword | undefined> {
     const existingKeyword = await this.getKeyword(id, userId);
     if (!existingKeyword) {
       return undefined;
     }
-
+    const db = await getDb();
     const [updated] = await db
       .update(keywords)
       .set({ ...keyword, updatedAt: new Date() })
       .where(eq(keywords.id, id))
       .returning();
-    
     return updated;
   }
 
   async deleteKeyword(id: number, userId: string): Promise<boolean> {
-    console.log("deleteKeyword called with ID:", id, "type:", typeof id, "for user:", userId);
-    
     if (!id || isNaN(id) || id <= 0) {
-      console.error("Invalid keyword ID in deleteKeyword:", id);
       return false;
     }
-    
-    // Verify project ownership
     const keyword = await this.getKeyword(id, userId);
     if (!keyword) {
-      console.log("Keyword not found or access denied for ID:", id);
       return false;
     }
-
+    const db = await getDb();
     const result = await db.delete(keywords).where(eq(keywords.id, id));
-    console.log("Single delete result:", result);
     return (result.rowCount || 0) > 0;
   }
 
   async deleteKeywords(ids: number[], userId: string): Promise<boolean> {
     if (ids.length === 0) return true;
-    
-    console.log("deleteKeywords called with IDs:", ids, "for user:", userId);
-    
-    // Verify ownership for all keywords
     for (const id of ids) {
-      console.log("Checking ownership for keyword ID:", id);
       if (!id || isNaN(id) || id <= 0) {
-        console.error("Invalid keyword ID in deleteKeywords:", id);
         return false;
       }
-      
       const keyword = await this.getKeyword(id, userId);
       if (!keyword) {
-        console.error("Keyword not found or access denied for ID:", id);
         return false;
       }
     }
-
+    const db = await getDb();
     const result = await db.delete(keywords).where(inArray(keywords.id, ids));
-    console.log("Delete result:", result);
     return (result.rowCount || 0) > 0;
   }
 
   async deleteKeywordsByProject(projectId: number, userId: string): Promise<boolean> {
-    // Verify project ownership
     const project = await this.getProject(projectId, userId);
     if (!project) {
-      console.error("Project not found or access denied for project ID:", projectId);
       return false;
     }
-
-    const result = await db.delete(keywords).where(eq(keywords.projectId, projectId));
-    console.log(`Deleted ${result.rowCount || 0} keywords for project ${projectId}`);
+    const db = await getDb();
+    await db.delete(keywords).where(eq(keywords.projectId, projectId));
     return true;
   }
 
@@ -435,42 +449,47 @@ export class DatabaseStorage implements IStorage {
   }> {
     const userProjects = await this.getProjects(userId);
     const totalProjects = userProjects.length;
-    
-    // Get all campaigns for user's projects
+
     let activeCampaigns = 0;
     for (const project of userProjects) {
       const projectCampaigns = await this.getCampaigns(project.id, userId);
-      activeCampaigns += projectCampaigns.filter(c => c.status === "active").length;
+      activeCampaigns += projectCampaigns.filter((c) => c.status === "active").length;
     }
-    
+
     const allAdvertisers = await this.getAdvertisers();
-    const advertisers = allAdvertisers.length;
-    
-    // Get unique countries from user's projects
-    const countries = new Set();
-    userProjects.forEach(project => {
-      project.countries.forEach(country => countries.add(country));
+    const advertisersCount = allAdvertisers.length;
+
+    const countries = new Set<string>();
+    userProjects.forEach((project) => {
+      project.countries.forEach((country) => countries.add(country));
     });
-    
+
     return {
       totalProjects,
       activeCampaigns,
-      advertisers,
+      advertisers: advertisersCount,
       countries: countries.size,
     };
   }
 
   // Traffic Source operations
   async getTrafficSources(): Promise<TrafficSource[]> {
-    return await db.select().from(trafficSources).where(eq(trafficSources.isActive, true)).orderBy(trafficSources.displayName);
+    const db = await getDb();
+    return await db
+      .select()
+      .from(trafficSources)
+      .where(eq(trafficSources.isActive, true))
+      .orderBy(trafficSources.displayName);
   }
 
   async getTrafficSource(id: number): Promise<TrafficSource | undefined> {
+    const db = await getDb();
     const [trafficSource] = await db.select().from(trafficSources).where(eq(trafficSources.id, id));
     return trafficSource;
   }
 
   async createTrafficSource(trafficSourceData: InsertTrafficSource): Promise<TrafficSource> {
+    const db = await getDb();
     const [trafficSource] = await db
       .insert(trafficSources)
       .values(trafficSourceData)
@@ -478,7 +497,11 @@ export class DatabaseStorage implements IStorage {
     return trafficSource;
   }
 
-  async updateTrafficSource(id: number, trafficSourceData: Partial<InsertTrafficSource>): Promise<TrafficSource | undefined> {
+  async updateTrafficSource(
+    id: number,
+    trafficSourceData: Partial<InsertTrafficSource>,
+  ): Promise<TrafficSource | undefined> {
+    const db = await getDb();
     const [trafficSource] = await db
       .update(trafficSources)
       .set({ ...trafficSourceData, updatedAt: new Date() })
@@ -488,12 +511,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTrafficSource(id: number): Promise<boolean> {
+    const db = await getDb();
     const result = await db.delete(trafficSources).where(eq(trafficSources.id, id));
     return (result.rowCount || 0) > 0;
   }
 
   // Campaign Group operations
   async getCampaignGroups(projectId: number | null, userId: string): Promise<CampaignGroup[]> {
+    const db = await getDb();
     if (projectId) {
       return await db
         .select()
@@ -510,6 +535,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCampaignGroup(id: number, userId: string): Promise<CampaignGroup | undefined> {
+    const db = await getDb();
     const [campaignGroup] = await db
       .select()
       .from(campaignGroups)
@@ -517,7 +543,11 @@ export class DatabaseStorage implements IStorage {
     return campaignGroup;
   }
 
-  async createCampaignGroup(campaignGroupData: InsertCampaignGroup, userId: string): Promise<CampaignGroup> {
+  async createCampaignGroup(
+    campaignGroupData: InsertCampaignGroup,
+    userId: string,
+  ): Promise<CampaignGroup> {
+    const db = await getDb();
     const [campaignGroup] = await db
       .insert(campaignGroups)
       .values({ ...campaignGroupData, userId })
@@ -525,7 +555,12 @@ export class DatabaseStorage implements IStorage {
     return campaignGroup;
   }
 
-  async updateCampaignGroup(id: number, campaignGroupData: Partial<InsertCampaignGroup>, userId: string): Promise<CampaignGroup | undefined> {
+  async updateCampaignGroup(
+    id: number,
+    campaignGroupData: Partial<InsertCampaignGroup>,
+    userId: string,
+  ): Promise<CampaignGroup | undefined> {
+    const db = await getDb();
     const [campaignGroup] = await db
       .update(campaignGroups)
       .set({ ...campaignGroupData, updatedAt: new Date() })
@@ -536,18 +571,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCampaignGroup(id: number, userId: string): Promise<boolean> {
     try {
+      const db = await getDb();
       const result = await db
         .delete(campaignGroups)
         .where(and(eq(campaignGroups.id, id), eq(campaignGroups.userId, userId)));
       return (result.rowCount || 0) > 0;
     } catch (error) {
-      console.error("Error deleting campaign group:", error);
       return false;
     }
   }
 
   // Meta Campaign operations
   async getMetaCampaigns(userId: string): Promise<MetaCampaign[]> {
+    const db = await getDb();
     return await db
       .select()
       .from(metaCampaigns)
@@ -556,6 +592,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMetaCampaign(id: number, userId: string): Promise<MetaCampaign | undefined> {
+    const db = await getDb();
     const [metaCampaign] = await db
       .select()
       .from(metaCampaigns)
@@ -563,7 +600,11 @@ export class DatabaseStorage implements IStorage {
     return metaCampaign;
   }
 
-  async createMetaCampaign(metaCampaignData: InsertMetaCampaign, userId: string): Promise<MetaCampaign> {
+  async createMetaCampaign(
+    metaCampaignData: InsertMetaCampaign,
+    userId: string,
+  ): Promise<MetaCampaign> {
+    const db = await getDb();
     const [metaCampaign] = await db
       .insert(metaCampaigns)
       .values({ ...metaCampaignData, userId })
@@ -571,7 +612,12 @@ export class DatabaseStorage implements IStorage {
     return metaCampaign;
   }
 
-  async updateMetaCampaign(id: number, metaCampaignData: Partial<InsertMetaCampaign>, userId: string): Promise<MetaCampaign | undefined> {
+  async updateMetaCampaign(
+    id: number,
+    metaCampaignData: Partial<InsertMetaCampaign>,
+    userId: string,
+  ): Promise<MetaCampaign | undefined> {
+    const db = await getDb();
     const [metaCampaign] = await db
       .update(metaCampaigns)
       .set({ ...metaCampaignData, updatedAt: new Date() })
@@ -582,15 +628,409 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMetaCampaign(id: number, userId: string): Promise<boolean> {
     try {
+      const db = await getDb();
       const result = await db
         .delete(metaCampaigns)
         .where(and(eq(metaCampaigns.id, id), eq(metaCampaigns.userId, userId)));
       return (result.rowCount || 0) > 0;
     } catch (error) {
-      console.error("Error deleting meta campaign:", error);
       return false;
     }
   }
 }
 
-export const storage = new DatabaseStorage();
+class MemoryStorage implements IStorage {
+  private mem = {
+    users: new Map<string, User>(),
+    projects: new Map<number, Project>(),
+    campaigns: new Map<number, Campaign>(),
+    campaignGroups: new Map<number, CampaignGroup>(),
+    advertisers: new Map<number, Advertiser>(),
+    keywords: new Map<number, Keyword>(),
+    trafficSources: new Map<number, TrafficSource>(),
+    metaCampaigns: new Map<number, MetaCampaign>(),
+  };
+  private counters = {
+    project: 1,
+    campaign: 1,
+    campaignGroup: 1,
+    advertiser: 1,
+    keyword: 1,
+    trafficSource: 1,
+    metaCampaign: 1,
+  };
+
+  constructor() {
+    // Seed a hardcoded user to match index.ts auth mock
+    const u: User = {
+      id: "hardcoded-user-123",
+      email: "test@example.com",
+      firstName: "Test",
+      lastName: "User",
+      profileImageUrl: null as any,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as User;
+    this.mem.users.set(u.id, u);
+
+    // Seed some advertisers and traffic sources for UI
+    const adv: Advertiser = {
+      id: this.counters.advertiser++,
+      name: "Default Advertiser",
+      channelIds: [],
+      domains: [],
+      sampleUrl: null as any,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as Advertiser;
+    this.mem.advertisers.set(adv.id, adv);
+
+    const ts: TrafficSource = {
+      id: this.counters.trafficSource++,
+      name: "google_ads",
+      displayName: "Google Ads",
+      fields: {},
+      isActive: true as any,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as TrafficSource;
+    this.mem.trafficSources.set(ts.id, ts);
+
+    // Seed a sample project
+    const p: Project = {
+      id: this.counters.project++,
+      name: "Sample Project",
+      topics: ["digital marketing"],
+      languages: ["en"],
+      countries: ["US"],
+      keywordsVolume: 100,
+      keywordsBid: "1.00" as any,
+      numberOfKeywords: 10,
+      advertiserId: adv.id as any,
+      status: "draft" as any,
+      userId: u.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as Project;
+    this.mem.projects.set(p.id, p);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return this.mem.users.get(id);
+  }
+  async upsertUser(user: UpsertUser): Promise<User> {
+    const existing = this.mem.users.get(user.id);
+    const now = new Date();
+    const newUser = {
+      ...(existing as any),
+      ...user,
+      updatedAt: now,
+      createdAt: existing?.createdAt ?? now,
+    } as unknown as User;
+    this.mem.users.set(user.id, newUser);
+    return newUser;
+  }
+
+  async getProjects(userId: string): Promise<Project[]> {
+    return [...this.mem.projects.values()].filter((p) => userId === "system" || p.userId === userId);
+  }
+  async getProject(id: number, userId: string): Promise<Project | undefined> {
+    const p = this.mem.projects.get(id);
+    if (!p) return undefined;
+    if (userId !== "system" && p.userId !== userId) return undefined;
+    return p;
+  }
+  async createProject(project: InsertProject, userId: string): Promise<Project> {
+    const id = this.counters.project++;
+    const now = new Date();
+    const created = {
+      id,
+      ...project,
+      userId,
+      createdAt: now,
+      updatedAt: now,
+    } as unknown as Project;
+    this.mem.projects.set(id, created);
+    return created;
+  }
+  async updateProject(
+    id: number,
+    project: Partial<InsertProject>,
+    userId: string,
+  ): Promise<Project | undefined> {
+    const existing = await this.getProject(id, userId);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...project, updatedAt: new Date() } as Project;
+    this.mem.projects.set(id, updated);
+    return updated;
+  }
+  async deleteProject(id: number, userId: string): Promise<boolean> {
+    const existing = await this.getProject(id, userId);
+    if (!existing) return false;
+    this.mem.projects.delete(id);
+    for (const [kid, kw] of [...this.mem.keywords.entries()]) {
+      if ((kw as any).projectId === id) this.mem.keywords.delete(kid);
+    }
+    return true;
+  }
+
+  async getCampaigns(projectId: number | null, userId: string): Promise<Campaign[]> {
+    const all = [...this.mem.campaigns.values()].filter((c) => {
+      const p = this.mem.projects.get((c as any).projectId);
+      return userId === "system" || p?.userId === userId;
+    });
+    return projectId ? all.filter((c) => (c as any).projectId === projectId) : all;
+  }
+  async getCampaign(id: number, userId: string): Promise<Campaign | undefined> {
+    const c = this.mem.campaigns.get(id);
+    if (!c) return undefined;
+    const p = this.mem.projects.get((c as any).projectId);
+    if (userId !== "system" && p?.userId !== userId) return undefined;
+    return c;
+  }
+  async createCampaign(campaign: InsertCampaign, userId: string): Promise<Campaign> {
+    const p = await this.getProject((campaign as any).projectId, userId);
+    if (!p) throw new Error("Project not found or access denied");
+    const id = this.counters.campaign++;
+    const now = new Date();
+    const c = { id, ...campaign, createdAt: now, updatedAt: now } as unknown as Campaign;
+    this.mem.campaigns.set(id, c);
+    return c;
+  }
+  async updateCampaign(
+    id: number,
+    campaign: Partial<InsertCampaign>,
+    userId: string,
+  ): Promise<Campaign | undefined> {
+    const existing = await this.getCampaign(id, userId);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...campaign, updatedAt: new Date() } as Campaign;
+    this.mem.campaigns.set(id, updated);
+    return updated;
+  }
+  async deleteCampaign(id: number, userId: string): Promise<boolean> {
+    const existing = await this.getCampaign(id, userId);
+    if (!existing) return false;
+    this.mem.campaigns.delete(id);
+    return true;
+  }
+
+  async getAdvertisers(): Promise<Advertiser[]> {
+    return [...this.mem.advertisers.values()];
+  }
+  async getAdvertiser(id: number): Promise<Advertiser | undefined> {
+    return this.mem.advertisers.get(id);
+  }
+  async createAdvertiser(advertiser: InsertAdvertiser): Promise<Advertiser> {
+    const id = this.counters.advertiser++;
+    const now = new Date();
+    const a = { id, ...advertiser, createdAt: now, updatedAt: now } as unknown as Advertiser;
+    this.mem.advertisers.set(id, a);
+    return a;
+  }
+  async updateAdvertiser(
+    id: number,
+    advertiser: Partial<InsertAdvertiser>,
+  ): Promise<Advertiser | undefined> {
+    const existing = this.mem.advertisers.get(id);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...advertiser, updatedAt: new Date() } as Advertiser;
+    this.mem.advertisers.set(id, updated);
+    return updated;
+  }
+
+  async getKeywords(projectId: number | null, userId: string): Promise<Keyword[]> {
+    const all = [...this.mem.keywords.values()].filter((k) => {
+      const p = this.mem.projects.get((k as any).projectId);
+      return userId === "system" || p?.userId === userId;
+    });
+    return projectId ? all.filter((k) => (k as any).projectId === projectId) : all;
+  }
+  async getKeyword(id: number, userId: string): Promise<Keyword | undefined> {
+    const k = this.mem.keywords.get(id);
+    if (!k) return undefined;
+    const p = this.mem.projects.get((k as any).projectId);
+    if (userId !== "system" && p?.userId !== userId) return undefined;
+    return k;
+  }
+  async createKeyword(keyword: InsertKeyword, userId: string): Promise<Keyword> {
+    const p = await this.getProject((keyword as any).projectId, userId);
+    if (!p) throw new Error("Project not found or access denied");
+    const id = this.counters.keyword++;
+    const now = new Date();
+    const k = { id, ...keyword, createdAt: now, updatedAt: now } as unknown as Keyword;
+    this.mem.keywords.set(id, k);
+    return k;
+  }
+  async createKeywords(keywordList: InsertKeyword[], userId: string): Promise<Keyword[]> {
+    const out: Keyword[] = [];
+    for (const kw of keywordList) {
+      out.push(await this.createKeyword(kw, userId));
+    }
+    return out;
+  }
+  async updateKeyword(
+    id: number,
+    keyword: Partial<InsertKeyword>,
+    userId: string,
+  ): Promise<Keyword | undefined> {
+    const existing = await this.getKeyword(id, userId);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...keyword, updatedAt: new Date() } as Keyword;
+    this.mem.keywords.set(id, updated);
+    return updated;
+  }
+  async deleteKeyword(id: number, userId: string): Promise<boolean> {
+    const existing = await this.getKeyword(id, userId);
+    if (!existing) return false;
+    this.mem.keywords.delete(id);
+    return true;
+  }
+  async deleteKeywords(ids: number[], userId: string): Promise<boolean> {
+    for (const id of ids) {
+      const ok = await this.deleteKeyword(id, userId);
+      if (!ok) return false;
+    }
+    return true;
+  }
+  async deleteKeywordsByProject(projectId: number, userId: string): Promise<boolean> {
+    const p = await this.getProject(projectId, userId);
+    if (!p) return false;
+    for (const [id, k] of [...this.mem.keywords.entries()]) {
+      if ((k as any).projectId === projectId) this.mem.keywords.delete(id);
+    }
+    return true;
+  }
+
+  async getProjectStats(userId: string): Promise<{
+    totalProjects: number;
+    activeCampaigns: number;
+    advertisers: number;
+    countries: number;
+  }> {
+    const userProjects = await this.getProjects(userId);
+    const totalProjects = userProjects.length;
+    let activeCampaigns = 0;
+    for (const p of userProjects) {
+      const cs = await this.getCampaigns(p.id, userId);
+      activeCampaigns += cs.filter((c) => (c as any).status === "active").length;
+    }
+    const advertisersCount = this.mem.advertisers.size;
+    const countries = new Set<string>();
+    userProjects.forEach((p) => p.countries.forEach((c) => countries.add(c)));
+    return { totalProjects, activeCampaigns, advertisers: advertisersCount, countries: countries.size };
+  }
+
+  async getTrafficSources(): Promise<TrafficSource[]> {
+    return [...this.mem.trafficSources.values()].filter((t) => (t as any).isActive !== false);
+  }
+  async getTrafficSource(id: number): Promise<TrafficSource | undefined> {
+    return this.mem.trafficSources.get(id);
+  }
+  async createTrafficSource(trafficSourceData: InsertTrafficSource): Promise<TrafficSource> {
+    const id = this.counters.trafficSource++;
+    const now = new Date();
+    const t = { id, ...trafficSourceData, createdAt: now, updatedAt: now } as unknown as TrafficSource;
+    this.mem.trafficSources.set(id, t);
+    return t;
+  }
+  async updateTrafficSource(
+    id: number,
+    trafficSourceData: Partial<InsertTrafficSource>,
+  ): Promise<TrafficSource | undefined> {
+    const existing = this.mem.trafficSources.get(id);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...trafficSourceData, updatedAt: new Date() } as TrafficSource;
+    this.mem.trafficSources.set(id, updated);
+    return updated;
+  }
+  async deleteTrafficSource(id: number): Promise<boolean> {
+    const existed = this.mem.trafficSources.delete(id);
+    return existed;
+  }
+
+  async getCampaignGroups(projectId: number | null, userId: string): Promise<CampaignGroup[]> {
+    const all = [...this.mem.campaignGroups.values()].filter((cg) => {
+      const p = this.mem.projects.get((cg as any).projectId);
+      return userId === "system" || p?.userId === userId;
+    });
+    return projectId ? all.filter((cg) => (cg as any).projectId === projectId) : all;
+  }
+  async getCampaignGroup(id: number, userId: string): Promise<CampaignGroup | undefined> {
+    const cg = this.mem.campaignGroups.get(id);
+    if (!cg) return undefined;
+    const p = this.mem.projects.get((cg as any).projectId);
+    if (userId !== "system" && p?.userId !== userId) return undefined;
+    return cg;
+  }
+  async createCampaignGroup(
+    campaignGroupData: InsertCampaignGroup,
+    userId: string,
+  ): Promise<CampaignGroup> {
+    const p = await this.getProject((campaignGroupData as any).projectId, userId);
+    if (!p) throw new Error("Project not found or access denied");
+    const id = this.counters.campaignGroup++;
+    const now = new Date();
+    const cg = { id, ...campaignGroupData, userId, createdAt: now, updatedAt: now } as unknown as CampaignGroup;
+    this.mem.campaignGroups.set(id, cg);
+    return cg;
+  }
+  async updateCampaignGroup(
+    id: number,
+    campaignGroupData: Partial<InsertCampaignGroup>,
+    userId: string,
+  ): Promise<CampaignGroup | undefined> {
+    const existing = await this.getCampaignGroup(id, userId);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...campaignGroupData, updatedAt: new Date() } as CampaignGroup;
+    this.mem.campaignGroups.set(id, updated);
+    return updated;
+  }
+  async deleteCampaignGroup(id: number, userId: string): Promise<boolean> {
+    const existing = await this.getCampaignGroup(id, userId);
+    if (!existing) return false;
+    this.mem.campaignGroups.delete(id);
+    return true;
+  }
+
+  async getMetaCampaigns(userId: string): Promise<MetaCampaign[]> {
+    return [...this.mem.metaCampaigns.values()].filter((mc) => (mc as any).userId === userId);
+  }
+  async getMetaCampaign(id: number, userId: string): Promise<MetaCampaign | undefined> {
+    const mc = this.mem.metaCampaigns.get(id);
+    if (!mc) return undefined;
+    if ((mc as any).userId !== userId) return undefined;
+    return mc;
+  }
+  async createMetaCampaign(
+    metaCampaignData: InsertMetaCampaign,
+    userId: string,
+  ): Promise<MetaCampaign> {
+    const id = this.counters.metaCampaign++;
+    const now = new Date();
+    const mc = { id, ...metaCampaignData, userId, createdAt: now, updatedAt: now } as unknown as MetaCampaign;
+    this.mem.metaCampaigns.set(id, mc);
+    return mc;
+  }
+  async updateMetaCampaign(
+    id: number,
+    metaCampaignData: Partial<InsertMetaCampaign>,
+    userId: string,
+  ): Promise<MetaCampaign | undefined> {
+    const existing = await this.getMetaCampaign(id, userId);
+    if (!existing) return undefined;
+    const updated = { ...(existing as any), ...metaCampaignData, updatedAt: new Date() } as MetaCampaign;
+    this.mem.metaCampaigns.set(id, updated);
+    return updated;
+  }
+  async deleteMetaCampaign(id: number, userId: string): Promise<boolean> {
+    const existing = await this.getMetaCampaign(id, userId);
+    if (!existing) return false;
+    this.mem.metaCampaigns.delete(id);
+    return true;
+  }
+}
+
+const useMemory = (process.env.STORAGE_MODE || "").toLowerCase() === "memory";
+console.log(`[storage] Mode: ${useMemory ? 'memory' : 'database'}`);
+export const storage: IStorage = useMemory ? new MemoryStorage() : new DatabaseStorage();

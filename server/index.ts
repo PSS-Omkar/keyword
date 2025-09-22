@@ -58,19 +58,24 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize hardcoded user in database
-  const { db } = await import("./db.js");
-  const { users } = await import("../shared/schema.js");
+  // Initialize hardcoded user in database when NOT in memory mode
+  if ((process.env.STORAGE_MODE || '').toLowerCase() !== 'memory') {
+    const { db } = await import("./db.js");
+    const { users } = await import("../shared/schema.js");
 
-  try {
-    await db.insert(users).values({
-      id: 'hardcoded-user-123',
-      email: 'test@example.com',
-      firstName: 'Test',
-      lastName: 'User'
-    }).onConflictDoNothing();
-  } catch (error) {
-    console.log("Hardcoded user already exists or error creating:", error);
+    try {
+      await db
+        .insert(users)
+        .values({
+          id: 'hardcoded-user-123',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+        })
+        .onConflictDoNothing();
+    } catch (error) {
+      console.log("Hardcoded user already exists or error creating:", error);
+    }
   }
 
   // Add basic API endpoints before complex routes
@@ -79,7 +84,7 @@ app.use((req, res, next) => {
       id: 'hardcoded-user-123',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     });
   });
 
