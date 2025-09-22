@@ -1,20 +1,31 @@
-# Client (React + Vite) - Development Dockerfile
-FROM node:20-alpine
-
-# Ensure dependencies for watchers work well inside containers
-ENV CHOKIDAR_USEPOLLING=true
-ENV WATCHPACK_POLLING=true
+# Multi-stage build for React frontend
+FROM node:18-alpine as build
 
 WORKDIR /app
 
-# Install deps first (uses cached layer when only src changes)
-COPY package.json package-lock.json* ./
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy the rest of the app
+# Copy source code
 COPY . .
 
-EXPOSE 5173
+# Build the app
+RUN npm run build
 
-# Run Vite in dev mode and listen on all interfaces for Docker
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Production stage with nginx
+FROM nginx:alpine
+
+# Copy built files from build stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration (optional)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+

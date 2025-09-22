@@ -1,17 +1,35 @@
-# Server (Node.js + Express + TypeScript) - Development Dockerfile
-FROM node:20-alpine
+# Node.js backend
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies (including dev deps for tsx)
-COPY package.json package-lock.json* ./
-RUN npm install
+# Install curl for health checks
+RUN apk add --no-cache curl
 
-# Copy the rest of the server source
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+#RUN npm ci --only=production && npm cache clean --force
+RUN npm install --only=production && npm cache clean --force
+# Copy source code
 COPY . .
 
-# The app listens internally on 5000; we map 8080->5000 in docker-compose
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
+# Expose port
 EXPOSE 5000
 
-# Default command can be overridden by compose
-CMD ["npm", "run", "dev"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
+# Start the application
+CMD ["node", "index.js"]
+
