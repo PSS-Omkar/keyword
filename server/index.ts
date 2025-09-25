@@ -58,8 +58,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize hardcoded user in database when NOT in memory mode
-  if ((process.env.STORAGE_MODE || '').toLowerCase() !== 'memory') {
+  // Initialize hardcoded user in database when NOT in memory mode and DB URL is present
+  if ((process.env.STORAGE_MODE || '').toLowerCase() !== 'memory' && process.env.DATABASE_URL) {
     const { db } = await import("./db.js");
     const { users } = await import("../shared/schema.js");
 

@@ -1031,6 +1031,6 @@ class MemoryStorage implements IStorage {
   }
 }
 
-const useMemory = (process.env.STORAGE_MODE || "").toLowerCase() === "memory";
+const useMemory = (process.env.STORAGE_MODE || "").toLowerCase() === "memory" || !process.env.DATABASE_URL;
 console.log(`[storage] Mode: ${useMemory ? 'memory' : 'database'}`);
 export const storage: IStorage = useMemory ? new MemoryStorage() : new DatabaseStorage();

@@ -1,17 +1,18 @@
 # Backend Dockerfile (server-only)
 FROM node:20-alpine AS builder
-WORKDIR /app
+WORKDIR /app/server
 
 # Install dependencies
 COPY server/package*.json ./
 RUN npm ci
 
 # Copy sources
-COPY server/ ./server/
-COPY shared/ ./shared/
+COPY server/ ./
+# Copy shared (for runtime imports)
+COPY shared/ /app/shared/
 
 # Build
-RUN npm run --prefix server build || true
+RUN npm run build || true
 
 # Runtime image
 FROM node:20-alpine
@@ -22,7 +23,7 @@ ENV NODE_ENV=production
 COPY --from=builder /app/server/node_modules ./server/node_modules
 COPY --from=builder /app/server/package*.json ./server/
 COPY --from=builder /app/server/dist ./dist
-COPY --from=builder /app/server/server ./server
+COPY --from=builder /app/server ./server
 COPY --from=builder /app/shared ./shared
 
 EXPOSE 5000

@@ -1,106 +1,53 @@
-# Keyword Generator - Separated Frontend and Backend
+# Keyword Generator (Frontend + Backend)
 
-This repository is organized to run frontend and backend independently, both locally and with Docker.
+This repo runs the frontend and backend separately, locally or via Docker Compose.
 
-## Repository structure
+## Structure
+- client/ — React + Vite frontend
+- server/ — Express + TypeScript backend
+- shared/ — Shared types/schemas (imported via @shared)
+- attached_assets/ — Assets used by the frontend
 
-- client/ — React + Vite frontend (standalone)
-  - Dockerfile
-  - docker-compose.yml
-  - vite.config.ts, tailwind.config.ts, postcss.config.js
-- server/ — Express + TypeScript backend (standalone)
-  - Dockerfile
-  - docker-compose.yml
-- shared/ — Shared types/schemas used by both (imported via @shared alias)
-- attached_assets/ — Static assets consumed by the frontend
+## Local development
 
-## Prerequisites
-
-- Node.js ≥ 18
-- npm ≥ 9
-- Docker (optional, for containerized runs)
-
----
-
-## Run locally (no Docker)
-
-### Frontend only
-
+Frontend
 - cd client
 - npm install
 - npm run dev
 - Open http://localhost:5173
 
-### Backend only (memory storage, no DB needed)
-
+Backend (in-memory, no DB required)
 - cd server
 - npm install
 - On macOS/Linux: STORAGE_MODE=memory npm run dev
 - On Windows (PowerShell): $env:STORAGE_MODE="memory"; npm run dev
-- API available at http://localhost:5000
+- API: http://localhost:5000
 
-### Backend with Postgres (optional)
+Backend with Postgres (optional)
+- Set DATABASE_URL (e.g., postgresql://user:pass@host:5432/db)
+- Remove STORAGE_MODE when using a real DB
 
-- Set DATABASE_URL (Postgres connection string), e.g.
-  - macOS/Linux: DATABASE_URL="postgresql://user:pass@host:5432/db" npm run dev
-  - Windows (PowerShell): $env:DATABASE_URL="postgresql://user:pass@host:5432/db"; npm run dev
-- Remove STORAGE_MODE from the environment when using a real DB.
+## Docker
 
-Notes:
-- The server exposes a health endpoint at GET /api/health.
-- The backend includes an in-memory storage fallback (STORAGE_MODE=memory) so you can develop without a database.
+- docker compose up --build
+- Frontend: http://localhost:3001
+- Backend:  http://localhost:5000
 
----
-
-## Run with Docker
-
-### Frontend container
-
-- From repo root:
-  - docker compose -f client/docker-compose.yml up --build
-- App served at http://localhost:3001
-
-### Backend container (memory storage by default)
-
-- From repo root:
-  - docker compose -f server/docker-compose.yml up --build
-- API served at http://localhost:5000
-
-To use Postgres in Docker:
-- Edit server/docker-compose.yml to remove STORAGE_MODE and add DATABASE_URL in environment section.
-
----
+Notes
+- client Docker image serves the built SPA with Nginx and proxies /api to the backend service
+- server Docker image runs the Express API; STORAGE_MODE defaults to memory unless DATABASE_URL is provided
 
 ## Environment variables (server)
+- STORAGE_MODE — "memory" to use in-memory storage
+- DATABASE_URL — Postgres connection string (when not using memory)
+- Optional Google Ads integration:
+  - GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI,
+  - GOOGLE_REFRESH_TOKEN, GOOGLE_DEVELOPER_TOKEN, GOOGLE_CUSTOMER_ID, GOOGLE_LOGIN_CUSTOMER_ID
+- USD_RATE — Optional micros→USD fallback rate
 
-- STORAGE_MODE — Set to "memory" to use in-memory storage (no DB). Default used in Docker backend.
-- DATABASE_URL — Postgres connection string (when not in memory mode).
-- Optional Google Ads integration vars (only if you use those endpoints):
-  - GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, GOOGLE_REFRESH_TOKEN, GOOGLE_DEVELOPER_TOKEN, GOOGLE_CUSTOMER_ID, GOOGLE_LOGIN_CUSTOMER_ID
-- USD_RATE — Optional rate for micros→USD conversion fallback.
+## Cleanup
+The root previously contained legacy/duplicate files. Cleaned to avoid confusion:
+- Removed root-level vite.config.ts and tailwind.config.ts (client has its own)
+- Removed legacy Dockerfiles under frontend/ and backend/
 
----
-
-## Legacy/monolithic dev (optional)
-
-The root-level development server can serve the frontend through Express + Vite in dev mode. If you only plan to run frontend and backend separately, you can ignore the root setup.
-
----
-
-## Cleaning unused root files
-
-If you confirm you no longer want the legacy/monolithic setup, the following can be removed safely:
-- frontend/ (legacy folder)
-- backend/ (legacy folder)
-- Dockerfile.dev (root-level)
-- Possibly root-level tools like tailwind.config.ts and vite.config.ts used by the monolithic dev server
-
-Caution: Removing root vite/tailwind configs will break the monolithic dev server used by server/vite.ts in development. Confirm before deletion.
-
----
-
-## Troubleshooting
-
-- If the backend returns 500s due to DB, ensure STORAGE_MODE=memory is set (or provide a valid DATABASE_URL).
-- Port conflicts: change the published ports in client/docker-compose.yml or server/docker-compose.yml.
-- Frontend API base URL: the UI calls the same origin by default when served via the monolithic dev server. When running frontend separately, configure your API base URL if needed (e.g., through a .env and Axios config).
+If you need anything restored, use the History tab to revert.
